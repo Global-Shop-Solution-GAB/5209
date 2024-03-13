@@ -1,0 +1,80 @@
+Program.Sub.ScreenSU.Start
+Program.Sub.ScreenSU.End
+
+Program.Sub.Preflight.Start
+Program.Sub.Preflight.End
+
+Program.Sub.Main.Start
+'BN, Sept 1, 2018
+'Customer: Marchant Schmidt, Inc
+'This project will update Item Price in Work Order when changed in Sales Order line's price.
+'Link from Sales Order to Work Orders: Order_To_WO table
+
+f.Intrinsic.Control.Try
+	v.Local.sError.Declare	
+	'Order Entry > File > Sales Orders > Open > Lines > Post-Save button
+	f.Intrinsic.Control.If(v.Caller.Hook,=,12231)
+		f.ODBC.Connection!conx.OpenCompanyConnection
+		f.Intrinsic.Control.CallSub("Update_WO_Price_When_Save")
+		f.ODBC.Connection!conx.Close	
+	f.Intrinsic.Control.EndIf
+	
+F.Intrinsic.Control.Catch
+	F.Intrinsic.String.Build("Project: {0}{1}Subroutine: {2}{1}Error Occurred {3} with description {4}{1}GAB Version: {5}}",V.Ambient.ScriptPath,V.Ambient.Newline,V.Ambient.CurrentSubroutine,V.Ambient.ErrorNumber,V.Ambient.ErrorDescription,V.Ambient.GABVersion,V.Local.sError)
+	F.Intrinsic.UI.Msgbox(V.Local.sError)
+	F.Intrinsic.Control.CallSub("Unload")	
+F.Intrinsic.Control.EndTry
+Program.Sub.Main.End
+
+Program.Sub.UnLoad.Start
+f.Intrinsic.Control.Try
+	v.Local.sError.Declare
+
+	F.Intrinsic.Control.If(V.ODBC.conx.State,=,1)
+		F.ODBC.Connection!conx.close
+	F.Intrinsic.Control.EndIf
+	
+	f.Intrinsic.Control.End
+
+F.Intrinsic.Control.Catch
+	Function.Intrinsic.String.Build("Subroutine Error {0}{0}Subroutine: {1}{0}Error Occurred {2} with description {3}",V.Ambient.Newline,V.Ambient.CurrentSubroutine,V.Ambient.ErrorNumber,V.Ambient.ErrorDescription,V.Local.sError)
+	F.Intrinsic.UI.Msgbox(V.Local.sError)
+	F.Intrinsic.Control.End	
+F.Intrinsic.Control.EndTry
+Program.Sub.UnLoad.End
+
+Program.Sub.Update_WO_Price_When_Save.Start
+f.Intrinsic.Control.Try
+	v.Local.sError.Declare
+	v.Local.sSQL.Declare
+	v.Local.sOrder.Declare
+	v.Local.sLine.Declare
+	v.Local.sRet.Declare
+
+	'Order number: Variable.Passed.000060
+	'Line: Variable.Passed.000051
+	'Price: Variable.Passed.000105
+	f.Intrinsic.String.LPad(Variable.Passed.000060,"0",7,v.Local.sOrder)
+	f.Intrinsic.String.LPad(Variable.Passed.000051,"0",3,V.Local.sLine)
+	
+	'Get Job,Suffix
+	f.Intrinsic.String.Build("Select Job,Suffix from Order_To_WO where Order_no = '{0}' and Order_Line = '{1}0'",V.Local.sOrder,V.Local.sLine,V.Local.sSQL)
+	F.ODBC.Connection!conx.ExecuteAndReturn(v.Local.sSQL,v.Local.sRet)
+	f.Intrinsic.Control.If(v.Local.sRet,<>,"")
+		f.Intrinsic.String.Split(v.Local.sRet,"*!*",v.Local.sRet)
+		'Update WO's Price in WO header
+		f.Intrinsic.String.Build("Update Job_header set AMT_PRICE_PER_UNIT = {0} where Job = '{1}' and Suffix = '{2}'",Variable.Passed.000105,v.Local.sRet(0),v.Local.sRet(1),v.Local.sSQL)
+		f.ODBC.Connection!conx.Execute(v.Local.sSQL)
+	f.Intrinsic.Control.EndIf
+	
+F.Intrinsic.Control.Catch
+	Function.Intrinsic.String.Build("Subroutine Error {0}{0}Subroutine: {1}{0}Error Occurred {2} with description {3}",V.Ambient.Newline,V.Ambient.CurrentSubroutine,V.Ambient.ErrorNumber,V.Ambient.ErrorDescription,V.Local.sError)
+	F.Intrinsic.UI.Msgbox(V.Local.sError)
+	F.Intrinsic.Control.CallSub("Unload")	
+F.Intrinsic.Control.EndTry
+Program.Sub.Update_WO_Price_When_Save.End
+
+Program.Sub.Comments.Start
+${$0$}$$}$BAO$}$4/18/2018 3:48:04 PM$}$False
+${$3$}$0$}$$}$0$}$-1$}$$}$12:00:00 AM$}$
+Program.Sub.Comments.End
